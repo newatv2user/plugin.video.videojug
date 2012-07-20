@@ -173,6 +173,8 @@ def Browse(Url):
         if not Title:
             continue
         Title = Title[0]
+        Title = common.replaceHTMLCodes(Title)
+        Title = Title.encode('utf-8')
                 
         Plot = common.parseDOM(Item, "img", ret="alt")
         if not Plot:
@@ -187,6 +189,7 @@ def Browse(Url):
             Genre = ''
         else:
             Genre = Genres[0]
+            Genre = common.replaceHTMLCodes(Genre)
         
         Mediaitem = MediaItem()
         Mediaitem.Image = Image
