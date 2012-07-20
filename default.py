@@ -121,6 +121,16 @@ def BuildMainDirectory():
         Mediaitem.ListItem.setLabel(Title)
         Mediaitem.Isfolder = True
         MediaItems.append(Mediaitem)
+    # Add more menu items for browsing
+    Menu = [('Search', '', search_thumb, M_SEARCH)]
+    for Title, URL, Thumb, Mode in Menu:
+        Mediaitem = MediaItem()
+        Mediaitem.Url = sys.argv[0] + "?url=" + urllib.quote_plus(URL) + "&mode=" + str(Mode) + "&name=" + urllib.quote_plus(Title)
+        Mediaitem.ListItem.setThumbnailImage(Thumb)
+        Mediaitem.ListItem.setLabel(Title)
+        Mediaitem.Isfolder = True
+        MediaItems.append(Mediaitem)
+        
     addDir(MediaItems)
 
     # End of Directory
@@ -222,19 +232,20 @@ def Browse(Url):
     ## Set Default View Mode. This might break with different skins. But who cares?
     SetViewMode()
     
-def Search():
-    keyb = xbmc.Keyboard('', 'Search Vidics.eu')
-    keyb.doModal()
-    if (keyb.isConfirmed() == False):
-        return
-    search = keyb.getText()
-    if not search or search == '':
-        return
+def Search(Url):
+    if Url == '':
+        keyb = xbmc.Keyboard('', 'Search Vidics.eu')
+        keyb.doModal()
+        if (keyb.isConfirmed() == False):
+            return
+        search = keyb.getText()
+        if not search or search == '':
+            return
+    
+        search = search.replace(' ', '+')
+        Url = BASE_URL + '/search?keywords=%s' % search
     # set content type so library shows more views and info
     xbmcplugin.setContent(int(sys.argv[1]), 'movies')
-    search = search.replace(' ', '+')
-    Url = BASE_URL + '/search?keywords=%s' % search
-    
     data = cache.cacheFunction(getURL, Url)
     if not data:
         return
@@ -268,6 +279,7 @@ def Search():
         Title = Title[0]
         Title = common.stripTags(Title)
         Title = common.replaceHTMLCodes(Title)
+        Title = Title.encode('utf-8')
                 
         Plot = common.parseDOM(Item, "p")
         if not Plot:
@@ -286,6 +298,37 @@ def Search():
         Mediaitem.ListItem.setLabel(Title)
         Mediaitem.ListItem.setProperty('IsPlayable', 'true')
         MediaItems.append(Mediaitem)
+        
+    # Next Page:
+    search_result_summary = common.parseDOM(data, "div", {"id": "search_result_summary"})
+    if search_result_summary:
+        search_result_summary = search_result_summary[0]
+        Total = re.compile('Total Results: (\d+)').findall(search_result_summary)
+        if Total:
+            Total = int(Total[0])
+            Page = re.compile('page=(\d+)').findall(Url)
+            if Page:
+                Page = int(Page[0])
+            else:
+                Page = 0
+            if Page * 10 < Total:
+                Mediaitem = MediaItem()
+                Title = "Next"
+                if Page == 0:
+                    nurl = Url
+                    Npage = 2
+                else:
+                    nurl = Url.split('&')[0]
+                    Npage = Page + 1
+                Url = nurl + '&page=%d&content=All&sort=Relevance' % Npage
+                Mediaitem.Image = next_thumb
+                Mediaitem.Mode = M_SEARCH
+                Mediaitem.Url = sys.argv[0] + "?url=" + urllib.quote_plus(Url) + "&mode=" + str(Mediaitem.Mode) + "&name=" + urllib.quote_plus(Title)
+                Mediaitem.ListItem.setInfo('video', { 'Title': Title})
+                Mediaitem.ListItem.setThumbnailImage(Mediaitem.Image)
+                Mediaitem.ListItem.setLabel(Title)
+                Mediaitem.Isfolder = True
+                MediaItems.append(Mediaitem)
     
     if MediaItems:        
         addDir(MediaItems)
@@ -422,4 +465,4 @@ elif mode == M_BROWSE:
 elif mode == M_PLAY:
     Play(url)
 elif mode == M_SEARCH:
-    Search()
+    Search(url)
