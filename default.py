@@ -109,7 +109,7 @@ def BuildMainDirectory():
         if not Url:
             continue
         Url = Url[0]
-        Title = common.parseDOM(item, "span", {"class": "text"})
+        Title = common.parseDOM(item, "span", {"class": "text lora"})
         if not Title:
             continue
         Title = Title[0]
